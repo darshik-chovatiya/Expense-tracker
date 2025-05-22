@@ -146,7 +146,7 @@ class ExpenseView(APIView):
             return Response({"status":False,
                              "message":"Expenses not found"},status=status.HTTP_404_NOT_FOUND)
         
-        serializer = UserCategoryserializers(expense , data=request.data , partial=True , context={'request':request})
+        serializer = UserExpenseserializers(expense , data=request.data , partial=True , context={'request':request})
 
         if serializer.is_valid():
             serializer.save()
@@ -160,7 +160,7 @@ class ExpenseView(APIView):
     
     def delete(self , request , expense_id):
         try:
-            expense = Category.objects.get(id=expense_id , user=request.user)
+            expense = Expense.objects.get(id=expense_id , user=request.user)
             expense.is_deleted = True
             expense.save()
 
