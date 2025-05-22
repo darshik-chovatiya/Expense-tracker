@@ -2,7 +2,7 @@ import re
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth import authenticate
-from .models import Users
+from .models import Users , Category , Expense
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     
@@ -21,7 +21,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         required=True,
         validators=[UniqueValidator(queryset=Users.objects.all(), message="Email already exists.")]
     )
-
+ 
     gender = serializers.ChoiceField(
         choices=Users.GENDER_CHOICES,
         error_messages={
@@ -78,8 +78,12 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        username_or_email = data.get('username')
+        username_or_email = data.get('username_or_email')
         password = data.get('password')
+
+        print('username.....................' , username_or_email)
+
+        print('password................................' , password)
 
         user = Users.objects.filter(username=username_or_email).first()
         if not user:
@@ -99,3 +103,39 @@ class UserLoginSerializer(serializers.Serializer):
 
         data['user'] = user
         return data
+
+class UserCategoryserializers(serializers.ModelSerializer):
+    
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        
+        model = Category
+        fields = ['id' , 'name' , 'user']
+
+    def validate_name(self , value):
+        user = self.context['request'].user
+        
+        if Category.objects.filter(user=user , name__iexact=value).exists():
+            raise serializers.ValidationError("This category alerady exists ")
+        
+        return value
+    
+class UserExpenseserializers(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = Expense
+        fields = ['id' , 'user' , 'category' , 'title' , 'other' , 'description' ]
+
+    title = serializers.CharField(required=True,
+                                  validators=[UniqueValidator(queryset=Expense.objects.all(),
+                                 message="Title already exists.")])
+
+    def validate_category(self , value):
+        user = self.context['request'].user
+
+        if value.user != user:
+            raise serializers.ValidationError("This category does not you")
+        
+        return value
